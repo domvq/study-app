@@ -1,0 +1,9 @@
+name = "study-ai-proxy"
+main = "worker.js"
+compatibility_date = "2026-10-01"
+
+# Per-visitor throttle: 6 requests per 60 seconds per IP address
+[[ratelimits]]
+name = "LIMITER"
+namespace_id = "1001"
+simple = { limit = 6, period = 60 }
