@@ -4,28 +4,25 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>StudyAI — Turn any topic into flashcards, quizzes & notes</title>
-<meta name="description" content="Type a topic or upload documents, search the web, and generate flashcards, slideshows, quizzes, study guides, expert solutions and Spark Notes-style summaries.">
+<meta name="description" content="Type a topic or upload documents, search the web, confirm the material is correct, and generate flashcards, slideshows, quizzes, study guides, expert solutions and Spark Notes-style summaries.">
 <link rel="stylesheet" href="styles.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 </head>
 <body>
 <header class="topbar">
   <div class="brand">📚 <strong>StudyAI</strong> <span class="tag">study smarter</span></div>
-  <nav>
-    <a href="#studio">Studio</a>
-    <a href="#results">Results</a>
-    <a href="#how">How it works</a>
-  </nav>
+  <nav><a href="#studio">Studio</a> <a href="#results">Results</a> <a href="#how">How it works</a></nav>
   <button class="btn small" id="sampleBtn" type="button">Try a sample topic</button>
 </header>
 
 <main>
   <section class="hero">
-    <h1>What do you want to learn today?</h1>
-    <p>Type a topic, paste notes, or upload a document. StudyAI searches the web for context, then turns it into everything you need to actually remember it.</p>
+    <h1>Make studying <span>stick.</span></h1>
+    <p>Turn any topic into a quick game. Type it, paste notes, or upload a document — StudyAI searches first, asks more questions if it can't find enough, and only builds your tools once you've confirmed the material is correct.</p>
   </section>
 
   <section class="card" id="studio">
+    <h2>1. Your material</h2>
     <div class="grid2">
       <div>
         <label for="topic">Topic to study</label>
@@ -33,15 +30,13 @@
         <label for="notes">Or paste your own notes / text</label>
         <textarea id="notes" rows="6" placeholder="Paste lecture notes, a chapter summary, or your own outline here…"></textarea>
         <div class="row wrap">
-          <label class="filebtn">📄 Upload document
-            <input id="fileInput" type="file" accept=".txt,.md,.pdf" hidden>
-          </label>
+          <label class="filebtn">📄 Upload document <input id="fileInput" type="file" accept=".txt,.md,.pdf" hidden></label>
           <span id="fileName" class="muted">No file chosen — .txt, .md or .pdf</span>
         </div>
         <p class="muted small" id="uploadStatus"></p>
       </div>
       <div>
-        <label>What should StudyAI create?</label>
+        <label>What should StudyAI create — after you confirm the material?</label>
         <div class="checks" id="outputChecks">
           <label><input type="checkbox" value="flashcards" checked> Flashcards</label>
           <label><input type="checkbox" value="slides" checked> Slideshow</label>
@@ -51,54 +46,74 @@
           <label><input type="checkbox" value="spark" checked> Spark Notes</label>
         </div>
         <label for="level">Level</label>
-        <select id="level">
-          <option>High school</option>
-          <option selected>College / general</option>
-          <option>Advanced</option>
-          <option>Quick revision</option>
-        </select>
+        <select id="level"><option>High school</option><option selected>College / general</option><option>Advanced</option><option>Quick revision</option></select>
         <details class="ai-settings">
-          <summary>Optional: use a real AI API (not required)</summary>
-          <p class="muted small">Leave this blank and StudyAI uses its built-in generator + Wikipedia search. If you add a key, it is stored only in your browser (localStorage) and sent only to the endpoint you set.</p>
-          <label for="apiBase">OpenAI-compatible base URL</label>
+          <summary>Optional: backend &amp; AI settings (not required)</summary>
+          <p class="muted small">Run <code>python3 backend/server.py</code> and this page, served from it, uses the Groq backend automatically. On GitHub Pages, paste your hosted backend URL here. Without a backend, the built-in generator + Wikipedia search still work.</p>
+          <label for="backendUrl">Backend URL (optional)</label>
+          <input id="backendUrl" type="text" placeholder="e.g. https://your-studyai-backend.onrender.com">
+          <label for="apiBase">OpenAI-compatible base URL (static mode only)</label>
           <input id="apiBase" type="text" placeholder="https://api.openai.com/v1">
-          <label for="apiKey">API key</label>
+          <label for="apiKey">API key (static mode only, stored only in your browser)</label>
           <input id="apiKey" type="password" placeholder="sk-… (optional)">
           <label for="apiModel">Model</label>
           <input id="apiModel" type="text" placeholder="gpt-4o-mini">
         </details>
         <div class="row wrap">
-          <button class="btn primary" id="generateBtn" type="button">✨ Generate study pack</button>
-          <button class="btn" id="searchOnlyBtn" type="button">🔍 Search web only</button>
+          <button class="btn primary" id="checkBtn" type="button">🔍 Search &amp; check material</button>
         </div>
-        <p class="muted small">Tip: the built-in generator works offline from your text + Wikipedia. A real API key makes explanations richer, but it is never required.</p>
+        <p class="muted small">Flow: search → if results are thin, answer follow-up questions → confirm the material is correct → only then are tools generated.</p>
       </div>
     </div>
     <div id="status" class="status" hidden></div>
   </section>
 
   <section id="searchResults" class="card" hidden>
-    <h2>🔍 Web search results</h2>
-    <p class="muted small">Source: Wikipedia (free, no key needed). Used as context for your study pack.</p>
+    <h2>🔍 Search results</h2>
+    <p class="muted small">Sources: Wikipedia + arXiv (via the backend when available, otherwise Wikipedia in the browser).</p>
     <div id="searchBox"></div>
   </section>
 
-  <section id="results" hidden>
-    <div class="tabs" role="tablist">
-      <button class="tab active" data-tab="flashcards">Flashcards</button>
-      <button class="tab" data-tab="slides">Slideshow</button>
-      <button class="tab" data-tab="quiz">Quiz</button>
-      <button class="tab" data-tab="guide">Study guide</button>
-      <button class="tab" data-tab="expert">Expert solutions</button>
-      <button class="tab" data-tab="spark">Spark Notes</button>
+  <section id="clarifySection" class="card warn" hidden>
+    <h2>🤔 I didn't find enough yet — can you help narrow it down?</h2>
+    <p id="clarifyReason" class="muted"></p>
+    <div id="clarifyBox"></div>
+    <div class="row wrap">
+      <button class="btn primary" id="answerBtn" type="button">Answer &amp; search again</button>
+      <button class="btn" id="skipClarifyBtn" type="button">Use my notes anyway</button>
     </div>
+  </section>
 
+  <section id="confirmSection" class="card confirm" hidden>
+    <h2>✅ Is this material correct?</h2>
+    <p id="aiAck"></p>
+    <h3>Summary</h3><p id="confirmSummary"></p>
+    <h3>Key points</h3><ul id="confirmPoints"></ul>
+    <h3>Sources</h3><ul id="confirmSources"></ul>
+    <p class="muted small">Nothing is generated yet. If this is wrong, edit your topic / notes above and search again. If it's right, confirm and I'll build your tools from this material.</p>
+    <div class="row wrap">
+      <button class="btn primary" id="confirmBtn" type="button">Yes, this is correct — generate my tools</button>
+      <button class="btn" id="editBtn" type="button">No, let me fix it</button>
+    </div>
+  </section>
+
+  <section id="results" hidden>
+    <h2>Pick your game</h2>
+    <p class="muted">Short rounds, active recall, instant feedback — pick a mode and do one more round.</p>
+    <div class="tabs" role="tablist">
+      <button class="tab active" data-tab="flashcards">🃏 Flashcards<small>Flip and recall</small></button>
+      <button class="tab" data-tab="match">⚡ Match<small>Speed-run terms</small></button>
+      <button class="tab" data-tab="quiz">🎯 Quiz<small>Test yourself</small></button>
+      <button class="tab" data-tab="slides">📽 Slideshow<small>Present it</small></button>
+      <button class="tab" data-tab="guide">📖 Study guide<small>Plan your session</small></button>
+      <button class="tab" data-tab="expert">🧠 Expert solutions<small>Step by step</small></button>
+      <button class="tab" data-tab="spark">✨ Spark Notes<small>60-second summary</small></button>
+    </div>
     <div class="actions row wrap">
       <button class="btn small" id="exportBtn" type="button">⬇ Export study pack (.md)</button>
       <button class="btn small" id="printBtn" type="button">🖨 Print / save as PDF</button>
       <span id="progress" class="muted"></span>
     </div>
-
     <div class="panel active" id="panel-flashcards">
       <div class="row wrap">
         <button class="btn small" id="shuffleBtn" type="button">🔀 Shuffle</button>
@@ -106,8 +121,7 @@
         <span id="cardCounter" class="muted"></span>
       </div>
       <div class="flashcard" id="flashcard" tabindex="0" role="button" aria-label="Flashcard, click to flip">
-        <div class="fc-label">QUESTION</div>
-        <div id="fcText"></div>
+        <div class="fc-label">QUESTION</div><div id="fcText"></div>
         <div class="muted small">Click the card (or Flip) to reveal the answer.</div>
       </div>
       <div class="row wrap">
@@ -117,7 +131,17 @@
         <button class="btn" id="dontKnowBtn" type="button">❌ Still learning</button>
       </div>
     </div>
-
+    <div class="panel" id="panel-match">
+      <p class="muted">Race to match each question with its answer. Beat your best time — your best time is saved in this browser.</p>
+      <div class="row wrap">
+        <span id="matchTimer" class="muted"><strong>Time:</strong> 0.0s</span>
+        <span id="matchScore" class="muted"><strong>Score:</strong> 0</span>
+        <span id="matchStreak" class="muted"><strong>Streak:</strong> 0</span>
+        <button class="btn small yellow" id="restartMatch" type="button">↻ New round</button>
+      </div>
+      <div class="match-grid" id="matchGrid"></div>
+      <p id="matchResult" class="muted"></p>
+    </div>
     <div class="panel" id="panel-slides">
       <div class="slide" id="slideBox"></div>
       <div class="row wrap">
@@ -126,7 +150,6 @@
         <span id="slideCounter" class="muted"></span>
       </div>
     </div>
-
     <div class="panel" id="panel-quiz">
       <div id="quizBox"></div>
       <div class="row wrap">
@@ -135,7 +158,6 @@
         <span id="quizScore" class="muted"></span>
       </div>
     </div>
-
     <div class="panel" id="panel-guide"><div id="guideBox" class="prose"></div></div>
     <div class="panel" id="panel-expert"><div id="expertBox" class="prose"></div></div>
     <div class="panel" id="panel-spark"><div id="sparkBox" class="prose"></div></div>
@@ -144,16 +166,16 @@
   <section class="card" id="how">
     <h2>How it works</h2>
     <ol>
-      <li><strong>Input:</strong> type a topic, paste notes, or upload a .txt / .md / .pdf document.</li>
-      <li><strong>Search:</strong> StudyAI looks up the topic on Wikipedia and combines that summary with your own material.</li>
-      <li><strong>Generate:</strong> it builds flashcards, a slideshow, a quiz, a study guide, expert-style step-by-step solutions, and a Spark Notes-style summary — all from the same source text, so they stay consistent.</li>
-      <li><strong>Study:</strong> flip cards, take the quiz, present the slideshow, or export the whole pack as Markdown.</li>
+      <li><strong>Step 1 — Open any topic:</strong> type it, paste notes, or upload a .txt / .md / .pdf document.</li>
+      <li><strong>Step 2 — Pick a game:</strong> Flashcards, Match, Quiz, Slideshow, and more — all built from the same confirmed material.</li>
+      <li><strong>Step 3 — Play anywhere:</strong> laptop, tablet, or phone. Short rounds fit your day, with scores, streaks, and instant feedback.</li>
     </ol>
-    <p class="muted small">Built as a static site on purpose: no server, no database, no build step. That is what makes it deployable on GitHub Pages in minutes. Your documents never leave your browser unless you choose to use an external AI API.</p>
+    <p class="muted small">Before any game is built: StudyAI searches Wikipedia and arXiv, asks follow-up questions if results are thin, and shows you a summary to confirm is correct. Only then does it generate the pack, which you can export as Markdown.</p>
+    <h3>Backend</h3>
+    <p class="muted small">The backend (<code>backend/server.py</code>) is modelled on your Groq reference: same model (<code>openai/gpt-oss-120b</code>), same <code>GROQ_API_KEY</code>, same prompt-truncation and JSON-cleaning helpers, plus arXiv search. It needs no pip packages. Set <code>GROQ_API_KEY</code> in <code>backend/.env</code> (see <code>backend/.env.example</code>) and run <code>python3 backend/server.py</code>. GitHub Pages serves only static files, so host the backend separately and paste its URL in Settings above if you deploy the frontend to Pages.</p>
   </section>
 </main>
-
-<footer class="muted small">StudyAI • A static, GitHub Pages-ready study app. Wikipedia summaries are used for context and are linked in the search results.</footer>
+<footer class="muted small">StudyAI • Static frontend + optional Python backend. Wikipedia / arXiv summaries are linked in the search results.</footer>
 <script src="app.js"></script>
 </body>
 </html>

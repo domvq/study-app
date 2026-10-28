@@ -1,0 +1,4 @@
+# No dependencies required — backend/server.py uses only the Python standard library.
+# It talks to Groq over HTTP and to arXiv / Wikipedia over HTTP.
+# (Your reference used openai, python-dotenv and arxiv; those are optional here
+# and are NOT required to run this backend.)
