@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>StudyAI — Turn any topic into flashcards, quizzes & notes</title>
+<meta name="description" content="Type a topic or upload documents, search the web, and generate flashcards, slideshows, quizzes, study guides, expert solutions and Spark Notes-style summaries.">
+<link rel="stylesheet" href="styles.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">📚 <strong>StudyAI</strong> <span class="tag">study smarter</span></div>
+  <nav>
+    <a href="#studio">Studio</a>
+    <a href="#results">Results</a>
+    <a href="#how">How it works</a>
+  </nav>
+  <button class="btn small" id="sampleBtn" type="button">Try a sample topic</button>
+</header>
+
+<main>
+  <section class="hero">
+    <h1>What do you want to learn today?</h1>
+    <p>Type a topic, paste notes, or upload a document. StudyAI searches the web for context, then turns it into everything you need to actually remember it.</p>
+  </section>
+
+  <section class="card" id="studio">
+    <div class="grid2">
+      <div>
+        <label for="topic">Topic to study</label>
+        <input id="topic" type="text" placeholder="e.g. Photosynthesis, The French Revolution, Quadratic equations" autocomplete="off">
+        <label for="notes">Or paste your own notes / text</label>
+        <textarea id="notes" rows="6" placeholder="Paste lecture notes, a chapter summary, or your own outline here…"></textarea>
+        <div class="row wrap">
+          <label class="filebtn">📄 Upload document
+            <input id="fileInput" type="file" accept=".txt,.md,.pdf" hidden>
+          </label>
+          <span id="fileName" class="muted">No file chosen — .txt, .md or .pdf</span>
+        </div>
+        <p class="muted small" id="uploadStatus"></p>
+      </div>
+      <div>
+        <label>What should StudyAI create?</label>
+        <div class="checks" id="outputChecks">
+          <label><input type="checkbox" value="flashcards" checked> Flashcards</label>
+          <label><input type="checkbox" value="slides" checked> Slideshow</label>
+          <label><input type="checkbox" value="quiz" checked> Quiz</label>
+          <label><input type="checkbox" value="guide" checked> Study guide</label>
+          <label><input type="checkbox" value="expert" checked> Expert solutions</label>
+          <label><input type="checkbox" value="spark" checked> Spark Notes</label>
+        </div>
+        <label for="level">Level</label>
+        <select id="level">
+          <option>High school</option>
+          <option selected>College / general</option>
+          <option>Advanced</option>
+          <option>Quick revision</option>
+        </select>
+        <details class="ai-settings">
+          <summary>Optional: use a real AI API (not required)</summary>
+          <p class="muted small">Leave this blank and StudyAI uses its built-in generator + Wikipedia search. If you add a key, it is stored only in your browser (localStorage) and sent only to the endpoint you set.</p>
+          <label for="apiBase">OpenAI-compatible base URL</label>
+          <input id="apiBase" type="text" placeholder="https://api.openai.com/v1">
+          <label for="apiKey">API key</label>
+          <input id="apiKey" type="password" placeholder="sk-… (optional)">
+          <label for="apiModel">Model</label>
+          <input id="apiModel" type="text" placeholder="gpt-4o-mini">
+        </details>
+        <div class="row wrap">
+          <button class="btn primary" id="generateBtn" type="button">✨ Generate study pack</button>
+          <button class="btn" id="searchOnlyBtn" type="button">🔍 Search web only</button>
+        </div>
+        <p class="muted small">Tip: the built-in generator works offline from your text + Wikipedia. A real API key makes explanations richer, but it is never required.</p>
+      </div>
+    </div>
+    <div id="status" class="status" hidden></div>
+  </section>
+
+  <section id="searchResults" class="card" hidden>
+    <h2>🔍 Web search results</h2>
+    <p class="muted small">Source: Wikipedia (free, no key needed). Used as context for your study pack.</p>
+    <div id="searchBox"></div>
+  </section>
+
+  <section id="results" hidden>
+    <div class="tabs" role="tablist">
+      <button class="tab active" data-tab="flashcards">Flashcards</button>
+      <button class="tab" data-tab="slides">Slideshow</button>
+      <button class="tab" data-tab="quiz">Quiz</button>
+      <button class="tab" data-tab="guide">Study guide</button>
+      <button class="tab" data-tab="expert">Expert solutions</button>
+      <button class="tab" data-tab="spark">Spark Notes</button>
+    </div>
+
+    <div class="actions row wrap">
+      <button class="btn small" id="exportBtn" type="button">⬇ Export study pack (.md)</button>
+      <button class="btn small" id="printBtn" type="button">🖨 Print / save as PDF</button>
+      <span id="progress" class="muted"></span>
+    </div>
+
+    <div class="panel active" id="panel-flashcards">
+      <div class="row wrap">
+        <button class="btn small" id="shuffleBtn" type="button">🔀 Shuffle</button>
+        <button class="btn small" id="flipBtn" type="button">↩ Flip card</button>
+        <span id="cardCounter" class="muted"></span>
+      </div>
+      <div class="flashcard" id="flashcard" tabindex="0" role="button" aria-label="Flashcard, click to flip">
+        <div class="fc-label">QUESTION</div>
+        <div id="fcText"></div>
+        <div class="muted small">Click the card (or Flip) to reveal the answer.</div>
+      </div>
+      <div class="row wrap">
+        <button class="btn" id="prevCard" type="button">← Previous</button>
+        <button class="btn" id="nextCard" type="button">Next →</button>
+        <button class="btn" id="knowBtn" type="button">✅ I know this</button>
+        <button class="btn" id="dontKnowBtn" type="button">❌ Still learning</button>
+      </div>
+    </div>
+
+    <div class="panel" id="panel-slides">
+      <div class="slide" id="slideBox"></div>
+      <div class="row wrap">
+        <button class="btn" id="prevSlide" type="button">← Previous slide</button>
+        <button class="btn" id="nextSlide" type="button">Next slide →</button>
+        <span id="slideCounter" class="muted"></span>
+      </div>
+    </div>
+
+    <div class="panel" id="panel-quiz">
+      <div id="quizBox"></div>
+      <div class="row wrap">
+        <button class="btn" id="checkQuiz" type="button">Check answers</button>
+        <button class="btn" id="resetQuiz" type="button">Reset quiz</button>
+        <span id="quizScore" class="muted"></span>
+      </div>
+    </div>
+
+    <div class="panel" id="panel-guide"><div id="guideBox" class="prose"></div></div>
+    <div class="panel" id="panel-expert"><div id="expertBox" class="prose"></div></div>
+    <div class="panel" id="panel-spark"><div id="sparkBox" class="prose"></div></div>
+  </section>
+
+  <section class="card" id="how">
+    <h2>How it works</h2>
+    <ol>
+      <li><strong>Input:</strong> type a topic, paste notes, or upload a .txt / .md / .pdf document.</li>
+      <li><strong>Search:</strong> StudyAI looks up the topic on Wikipedia and combines that summary with your own material.</li>
+      <li><strong>Generate:</strong> it builds flashcards, a slideshow, a quiz, a study guide, expert-style step-by-step solutions, and a Spark Notes-style summary — all from the same source text, so they stay consistent.</li>
+      <li><strong>Study:</strong> flip cards, take the quiz, present the slideshow, or export the whole pack as Markdown.</li>
+    </ol>
+    <p class="muted small">Built as a static site on purpose: no server, no database, no build step. That is what makes it deployable on GitHub Pages in minutes. Your documents never leave your browser unless you choose to use an external AI API.</p>
+  </section>
+</main>
+
+<footer class="muted small">StudyAI • A static, GitHub Pages-ready study app. Wikipedia summaries are used for context and are linked in the search results.</footer>
+<script src="app.js"></script>
+</body>
+</html>
